@@ -1,0 +1,80 @@
+#!/bin/sh
+###############################################################################
+# umount.remote - A script to unmount ACD/GDrive remotes for use with Plex
+###############################################################################
+# CONFIGURATION
+###############################################################################
+# shellcheck source=config
+. "${HOME}/.config/nimbostratus/config"
+
+###############################################################################
+# FUNCTIONS
+###############################################################################
+
+umount_gdrive () {
+	if [ "$use_gdrive" = 1 ]; then
+		if [ "$use_crypt" = 1 ] || [ "$use_gd_crypt" = 1 ]; then
+			echo "[ $(date ${date_format}) ] Unmounting decrypted Google Drive mountpoint -> ${gd_mount_decrypt}"
+			fusermount -uz "${gd_mount_decrypt}"
+		fi
+		echo "[ $(date ${date_format}) ] Unmounting Google Drive mountpoint -> ${gd_mount}"
+		fusermount -uz "${gd_mount}"
+	fi
+}
+
+umount_acd () {
+	if [ "$use_acd" = 1 ]; then
+		if [ "$use_crypt" = 1 ] || [ "$use_acd_crypt" = 1 ]; then
+			echo "[ $(date ${date_format}) ] Unmounting decrypted Amazon Cloud Drive mountpoint -> ${acd_mount_decrypt}"
+			fusermount -uz "${acd_mount_decrypt}"
+		fi
+		echo "[ $(date ${date_format}) ] Unmounting Amazon Cloud Drive mountpoint -> ${acd_mount}"
+		fusermount -uz "${acd_mount}"
+	fi
+}
+
+umount_union () {
+	echo "[ $(date ${date_format}) ] Unmounting Plex library mountpoint -> ${plex_media_dir}"
+	fusermount -uz "$plex_media_dir"
+}
+
+umount_cache () {
+	echo "[ $(date ${date_format}) ] Unmounting local media cache -> ${cached_media_dir}"
+	fusermount -uz "$cached_media_dir"
+}
+
+umount_local () {
+	if [ "$use_crypt" = 1 ] || [ "$use_local_crypt" ]; then
+		echo "[ $(date ${date_format}) ] Unmounting local decrypted media mountpoint -> ${local_media_decrypt}"
+		fusermount -uz "${local_media_decrypt}"
+	fi
+}
+
+###############################################################################
+case "$1" in
+        amazon|acd|ad)
+                umount_acd
+        ;;
+        google|gdrive|gd)
+                umount_gdrive
+        ;;
+        union)
+                umount_union
+        ;;
+        cache)
+                umount_cache
+        ;;
+	local)
+		umount_local
+	;;
+        all)
+                umount_gdrive
+                umount_acd
+                umount_union
+                umount_cache
+        ;;
+	*)
+		echo "usage: umount.remote all|amazon|gdrive|union|cache|local"
+	;;
+esac
+

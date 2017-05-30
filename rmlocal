@@ -1,0 +1,92 @@
+#!/bin/sh
+##############################################################################
+# CONFIGURATION
+##############################################################################
+# shellcheck source=config
+. "${HOME}/.config/nimbostratus/config"
+
+if [ "$use_crypt" = 1 ]; then
+	export ENCFS6_CONFIG="${encfs_cfg}"
+	local_dir="${local_media}"
+else
+	local_dir="${local_media_decrypt}"
+fi
+
+##############################################################################
+
+# If script is already running; abort.
+if pidof -o %PPID -x "$(basename "$0")"; then
+	echo "[ $(date ${date_format}) ] Deletion already in progress. Aborting."
+	exit 3
+fi
+
+# Generate file list and iterate through it...
+find "${local_dir}" -type f |
+	while read -r n; do
+
+		# Find the pathname relative to the root of your remote and store filename
+		filename="$(echo "$n" | sed -e s@"${local_dir}"@@)"
+		
+		# If we're using encryption, translate the filename to plaintext, else store filename
+		if [ "$use_crypt" = 1 ] || [ "$use_local_crypt" = 1 ]; then
+			name="$(encfsctl decode --extpass="${pass_cmd}" "${local_media}" "${filename}")"
+		else
+			name="$n"
+		fi
+
+		# Skip hidden or partial files.
+		case "$name" in
+			(*.partial~) continue ;;
+			(*_HIDDEN~) continue ;;
+			(*.QTFS) continue ;;
+			(*.fuse*) continue ;;
+		esac
+
+		# Get the MD5SUM of our local copy
+		local_checksum=$(md5sum "$n" | awk '{print $1}')
+
+		# If file is opened by another process, wait until it isn't.
+		while [ "$(lsof "$n" >/dev/null 2>&1)" ] || \
+			[ "$(lsof "${local_dir}/${name}" >/dev/null 2>&1)" ] || \
+			[ "$(lsof "${plex_media_dir}/${name}" >/dev/null 2>&1)" ]; do
+			echo "[ $(date ${date_format}) ] File -> ${name} in use. Retrying in 10 seconds."
+			sleep 10
+		done
+
+		# Check remote MD5SUMs
+		if [ "$use_gdrive" = 1 ]; then
+			gd_checksum=$($rclone_bin md5sum "${gd_remote}:${gd_subdir}${filename}" 2>&1 | awk '{print $1}' | head --lines=1)
+		fi
+
+		if [ "$use_acd" = 1 ]; then
+			acd_checksum=$($rclone_bin md5sum "${acd_remote}:${acd_subdir}${filename}" 2>&1 | awk '{print $1}' | head --lines=1)
+		fi
+		
+		# Check that all MD5SUMs match, and if so, delete local copies.
+		if [ "$use_gdrive" = 1 ] && [ "$use_acd" = 1 ]; then
+			if [ "$gd_checksum" = "$local_checksum" ] && [ "$acd_checksum" = "$local_checksum" ] && [ "$gd_checksum" = "$acd_checksum" ]; then
+				echo "[ $(date ${date_format}) ] Removing -> ${name}"
+				echo rm -f "$n"
+			else
+				echo "[ $(date ${date_format}) ] File -> ${name} not synced."
+			fi
+		elif [ "$use_gdrive" = 1 ]; then
+			if [ "$gd_checksum" = "$local_checksum" ]; then
+				echo "[ $(date ${date_format}) ] Removing -> ${name}"
+				rm -f "$n"
+			else
+				echo "[ $(date ${date_format}) ] File -> ${name} not synced."
+			fi
+		elif [ "$use_acd" = 1 ]; then
+			if [ "$acd_checksum" = "$local_checksum" ]; then
+				echo "[ $(date ${date_format}) ] Removing -> ${name}"
+				rm -f "$n"
+			else
+				echo "[ $(date ${date_format}) ] File -> ${name} not synced."
+			fi
+		fi
+	done
+
+# success!
+exit 0
+

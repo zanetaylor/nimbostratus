@@ -1,0 +1,73 @@
+#!/bin/sh
+# shellcheck disable=SC2034
+###############################################################################
+# DIRECTORIES
+###############################################################################
+bin_dir="${HOME}/bin"
+local_media="${HOME}/.local-encrypt"
+local_media_decrypt="${HOME}/.local-decrypt"
+acd_mount="${HOME}/.acd-encrypt"
+acd_mount_decrypt="${HOME}/.acd-decrypt"
+gd_mount="${HOME}/.gsuite-encrypt"
+gd_mount_decrypt="${HOME}/.gsuite-decrypt"
+plex_media_dir="${HOME}/media"
+cache_dir="${HOME}/.cache/nimbostratus"
+local_cache_dir="${HOME}/.cache/nimbostratus/media"
+cached_media_dir="${HOME}/mediacache"
+
+###############################################################################
+# GOOGLE DRIVE CONFIG
+###############################################################################
+use_gdrive=1
+gd_remote="gsuite"
+gd_label="default"
+gd_subdir=""
+use_ocamlfuse=0
+use_plexdrive=1
+use_gd_rclone=0
+use_gd_crypt=1
+
+###############################################################################
+# AMAZON DRIVE CONFIG
+###############################################################################
+use_acd=0
+acd_remote=""
+acd_subdir=""
+use_acdcli=0
+use_acd_rclone=0
+use_acd_crypt=0
+
+###############################################################################
+# BINS
+###############################################################################
+ufs_bin="${HOME}/bin/unionfs"
+rclone_bin="${HOME}/bin/rclone"
+acdcli_bin="${HOME}/virtualenv/bin/python ${HOME}/virtualenv/bin/acd_cli"
+ocamlfuse_bin="${HOME}/bin/google-drive-ocamlfuse"
+plexdrive_bin="${HOME}/bin/plexdrive-linux-amd64"
+
+###############################################################################
+# ENCFS CONFIG
+###############################################################################
+use_crypt=1
+use_local_crypt=1
+encfs_cfg="${HOME}/.encfs6.xml"
+pass_cmd="echo"
+
+###############################################################################
+# FUSE CONFIG
+###############################################################################
+allow_other=0
+
+###############################################################################
+# SCANNER CONFIG
+###############################################################################
+movie_category="2"
+movie_directory="${HOME}/media/movies"
+tv_category="3"
+tv_directory="${HOME}/media/tv"
+
+###############################################################################
+# MISC. CONFIG
+###############################################################################
+date_format="+%F@%T"

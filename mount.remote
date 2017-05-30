@@ -1,0 +1,232 @@
+#!/bin/sh
+###############################################################################
+# mount.remote - A script to mount ACD/GDrive remotes for use with Plex
+###############################################################################
+# CONFIGURATION
+###############################################################################
+# shellcheck source=config
+. "${HOME}/.config/nimbostratus/config"
+
+###############################################################################
+# EXPORTED VARS
+###############################################################################
+export ENCFS6_CONFIG="$encfs_cfg"
+
+###############################################################################
+# FUNCTIONS
+###############################################################################
+mount_gdrive () {
+	if [ "$use_gdrive" = 0 ]; then
+		return 3
+	fi
+
+	# Make sure GD mountpoint exists.
+	if [ ! -d "${gd_mount}" ]; then
+		mkdir "${gd_mount}"
+	fi
+
+	# Mount GD if not already mounted.
+	if ! mountpoint -q "$gd_mount" ; then
+		echo "[ $(date ${date_format}) ] Mounting Google Drive mountpoint: ${gd_mount}"
+		if [ "$use_ocamlfuse" = 1 ]; then
+			if [ "$allow_other" = 1 ]; then
+				fuse_options="ro,allow_other"
+			else
+				fuse_options="ro"
+			fi
+			"${ocamlfuse_bin}" -o "${fuse_options}" -label "${gd_label}" "${gd_mount}"
+		elif [ "$use_gd_rclone" = 1 ]; then
+			if [ "$allow_other" = 1 ]; then
+				fuse_options="--read-only --allow-other"
+			else
+				fuse_options="--read-only"
+			fi
+			"${rclone_bin}" mount "${fuse_options}" "${gd_remote}:${gd_subdir}" "${gd_mount}"
+		else
+			if [ "$allow_other" = 1 ]; then
+				fuse_options="-o allow_other"
+			else
+				fuse_options=""
+			fi
+			screen -dmS plexdrive "$plexdrive_bin" "${fuse_options}" "${gd_mount}"
+		fi		
+	else
+		echo "[ $(date ${date_format}) ] Google Drive mountpoint: ${gd_mount} already mounted."
+	fi
+	if [ "$use_gd_crypt" = 1 ] || [ "$use_crypt" = 1 ]; then
+
+		# Make sure decrypted GD directory exists.
+		if [ ! -d "${gd_mount_decrypt}" ]; then
+			mkdir "${gd_mount_decrypt}"
+		fi
+
+		# Mount GD decrypted directory if necessary.
+		if ! mountpoint -q "$gd_mount_decrypt"; then
+			echo "[ $(date ${date_format}) ] Mounting decrypted Google Drive: ${gd_mount_decrypt}"
+			encfs --extpass="$pass_cmd" "${gd_mount}" "${gd_mount_decrypt}"
+		else
+			echo "[ $(date ${date_format}) ] Decrypted Google Drive mountpoint: ${gd_mount_decrypt} already mounted."
+		fi
+	fi
+}
+
+mount_acd () {
+	if [ "$use_acd" = 0 ]; then
+		return 3
+	fi
+	
+	# Make sure ACD mountpoint exists.
+	if [ ! -d "${acd_mount}" ]; then
+		mkdir "${acd_mount}"
+	fi
+
+	# Mount ACD if not already mounted.
+	if ! mountpoint -q "$acd_mount" ; then
+		echo "[ $(date ${date_format}) ] Mounting Amazon Cloud Drive mountpoint: ${gd_mount}"
+		if [ "$use_acdcli" = 1 ]; then
+			if [ "$allow_other" = 1 ]; then
+				fuse_options="-ro -ao"
+			else
+				fuse_options="-ro"
+			fi
+			"${acdcli_bin}" mount "${fuse_options}" "${acd_mount}"
+		else
+			if [ "$allow_other" = 1 ]; then
+				fuse_options="--read-only --allow-other"
+			else
+				fuse_options="--read-only"
+			fi
+			"${rclone_bin}" mount "${fuse_options}" "${acd_remote}:${acd_subdir}" "${acd_mount}"
+		fi		
+	else
+		echo "[ $(date ${date_format}) ] Amazon Cloud Drive mountpoint: ${gd_mount} already mounted."
+	fi
+	if [ "$use_acd_crypt" = 1 ] || [ "$use_crypt" = 1 ]; then
+
+		# Make sure decrypted ACD directory exists.
+		if [ ! -d "${acd_mount_decrypt}" ]; then
+			mkdir "${acd_mount_decrypt}"
+		fi
+
+		# Mount ACD decrypted directory if necessary.
+		if ! mountpoint -q "$acd_mount_decrypt" ; then
+			echo "[ $(date ${date_format}) ] Mounting decrypted Amazon Cloud Drive mountpoint: ${acd_mount_decrypt}"
+			encfs --extpass="$pass_cmd" "${acd_mount}" "${acd_mount_decrypt}"
+		else
+			echo "[ $(date ${date_format}) ] Decrypted Amazon Cloud Drive mountpoint: ${acd_mount_decrypt} already mounted."
+		fi
+	fi
+}
+
+mount_local_media () {
+	if [ "$use_crypt" = 1 ] || [ "$use_local_crypt" = 1 ]; then
+		
+		# Make sure decrypted mountpoint exists.
+		if [ ! -d "${local_media_decrypt}" ]; then
+			mkdir "${local_media_decrypt}"
+		fi
+
+		# Mount decrypted local media if not already mounted.
+		if ! mountpoint -q "${local_media_decrypt}"; then
+			echo "[ $(date ${date_format}) ] Mounting local decrypted volume: ${local_media_decrypt}"
+			encfs "${local_media}" "${local_media_decrypt}"
+		else
+			echo "[ $(date ${date_format}) ] Local decrypted volume: ${local_media_decrypt} already mounted."
+		fi
+	fi
+}
+
+mount_union () {
+	# Make sure combined plex media directory exists.
+	if [ ! -d "${plex_media_dir}" ]; then
+		mkdir "${plex_media_dir}"
+	fi
+
+	if [ "$use_acd_crypt" = 1 ] || [ "$use_crypt" = 1 ]; then
+		acd_union="${acd_mount_decrypt}"
+	else
+		acd_union="${acd_mount}"
+	fi
+
+	if  [ "$use_crypt" = 1 ] || [ "$use_gd_crypt" = 1 ]; then
+		gd_union="${gd_mount_decrypt}"
+	else
+		gd_union="${gd_mount}"
+	fi
+
+	# Mount plex media directory if not already mounted.
+	if ! mountpoint -q "${plex_media_dir}"; then
+		echo "[ $(date ${date_format}) ] Mounting Plex library mountpoint: ${plex_media_dir}"
+		if [ "$use_acd" = 1 ]; then
+			ufs_mounts=":${acd_union}=RO"
+		fi
+		if [ "$use_gdrive" = 1 ]; then
+			ufs_mounts=":${gd_union}=RO${ufs_mounts}"
+		fi
+		if [ "$allow_other" = 1 ]; then
+			ufs_options=",allow_other"
+		fi 
+		
+		ufs_mounts="${local_media_decrypt}=RW${ufs_mounts}"
+		
+		"${ufs_bin}" -o "cow${ufs_options}" "${ufs_mounts}" "${plex_media_dir}"
+	else
+		echo "[ $(date ${date_format}) ] Plex library mountpoint: ${plex_media_dir} already mounted."
+	fi
+}
+
+mount_cache () {
+	# Make sure cache directory exists. If not, create it.
+	if [ ! -d "${cached_media_dir}" ]; then
+		mkdir "${cached_media_dir}"
+	fi
+
+	# Mount cache directory if not already mounted.
+	if ! mountpoint -q "${cached_media_dir}"; then
+		echo "[ $(date ${date_format}) ] Mounting local file cache: ${cached_media_dir}"
+
+		if [ "$allow_other" = 1 ]; then
+			ufs_options=",allow_other"
+		fi 
+
+		"${ufs_bin}" -o "cow${ufs_options}" "${local_cache_dir}=RO:${plex_media_dir}=RW" "${cached_media_dir}"
+
+	else
+		echo "[ $(date ${date_format}) ] Local file cache: ${cached_media_dir} already mounted."
+	fi
+}
+
+mount_help () {
+	echo "$0 all|amazon|gdrive|local|union|cache"
+}
+
+###############################################################################
+
+case "$1" in
+	amazon|acd|ad)  
+		mount_acd 
+	;;
+	google|gdrive|gd)
+		mount_gdrive 
+	;;
+	union)
+		mount_union 
+	;;
+	cache)
+		mount_cache 
+	;;
+	local)
+		mount_local_media
+	;;
+	all) 
+		mount_local_media
+		mount_gdrive
+		mount_acd
+		mount_union
+		mount_cache 
+	;;
+	*)
+		mount_help
+	;;
+esac
+
