@@ -129,7 +129,7 @@ mount_local_media () {
 		# Mount decrypted local media if not already mounted.
 		if ! mountpoint -q "${local_media_decrypt}"; then
 			echo "[ $(date ${date_format}) ] Mounting local decrypted volume: ${local_media_decrypt}"
-			encfs "${local_media}" "${local_media_decrypt}"
+			encfs --extpass="$pass_cmd" "${local_media}" "${local_media_decrypt}"
 		else
 			echo "[ $(date ${date_format}) ] Local decrypted volume: ${local_media_decrypt} already mounted."
 		fi
