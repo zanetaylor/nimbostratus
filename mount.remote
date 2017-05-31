@@ -48,7 +48,7 @@ mount_gdrive () {
 			else
 				fuse_options=""
 			fi
-			screen -dmS plexdrive "$plexdrive_bin" "${fuse_options}" "${gd_mount}"
+			screen -dmS plexdrive "$(which sh)" -c "${plexdrive_bin} -v 3 ${fuse_options} ${gd_mount}"
 		fi		
 	else
 		echo "[ $(date ${date_format}) ] Google Drive mountpoint: ${gd_mount} already mounted."
