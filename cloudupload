@@ -51,11 +51,11 @@ find "${local_media}" -type f |
 		# Copy file to remote destination[s], retaining path
 		if [ "$use_gdrive" = 1 ]; then
 			echo "[ $(date ${date_format}) ] Transfering file -> ${name} to Google Drive."
-			"${rclone_bin}" copy -c "$n" "${gd_remote}:${gd_subdir}${destpath}" >/dev/null 2>&1
+			"${rclone_bin}" copy -c "$n" "${gd_label}:${gd_subdir}${destpath}" >/dev/null 2>&1
 		fi
 		if [ "$use_acd" = 1 ]; then
 			echo "[ $(date ${date_format}) ] Transfering file -> ${name} to Amazon Cloud Drive."
-			"${rclone_bin}" copy -c "$n" "${acd_remote}:${acd_subdir}${destpath}" >/dev/null 2>&1
+			"${rclone_bin}" copy -c "$n" "${acd_label}:${acd_subdir}${destpath}" >/dev/null 2>&1
 		fi
 	done
 
