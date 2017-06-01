@@ -41,14 +41,14 @@ mount_gdrive () {
 			else
 				fuse_options="--read-only"
 			fi
-			"${rclone_bin}" mount "${fuse_options}" "${gd_remote}:${gd_subdir}" "${gd_mount}"
+			"${rclone_bin}" mount "${fuse_options}" "${gd_label}" "${gd_mount}"
 		else
 			if [ "$allow_other" = 1 ]; then
-				fuse_options="-o allow_other"
+				fuse_options="read_only,allow_other"
 			else
-				fuse_options=""
+				fuse_options="read_only"
 			fi
-			screen -dmS plexdrive "$(which sh)" -c "${plexdrive_bin} -v 3 ${fuse_options} ${gd_mount}"
+			screen -dmS plexdrive "$(which sh)" -c "${plexdrive_bin} -v 3 -o ${fuse_options} ${gd_mount}"
 		fi		
 	else
 		echo "[ $(date ${date_format}) ] Google Drive mountpoint: ${gd_mount} already mounted."
@@ -63,7 +63,11 @@ mount_gdrive () {
 		# Mount GD decrypted directory if necessary.
 		if ! mountpoint -q "$gd_mount_decrypt"; then
 			echo "[ $(date ${date_format}) ] Mounting decrypted Google Drive: ${gd_mount_decrypt}"
-			encfs --extpass="$pass_cmd" "${gd_mount}" "${gd_mount_decrypt}"
+			if [ ! "$gd_subdir" = "" ]; then
+				encfs --extpass="$pass_cmd" "${gd_mount}/${gd_subdir}" "${gd_mount_decrypt}"
+			else
+				encfs --extpass="$pass_cmd" "${gd_mount}" "${gd_mount_decrypt}"
+			fi
 		else
 			echo "[ $(date ${date_format}) ] Decrypted Google Drive mountpoint: ${gd_mount_decrypt} already mounted."
 		fi
@@ -96,7 +100,7 @@ mount_acd () {
 			else
 				fuse_options="--read-only"
 			fi
-			"${rclone_bin}" mount "${fuse_options}" "${acd_remote}:${acd_subdir}" "${acd_mount}"
+			"${rclone_bin}" mount "${fuse_options}" "${acd_label}" "${acd_mount}"
 		fi		
 	else
 		echo "[ $(date ${date_format}) ] Amazon Cloud Drive mountpoint: ${gd_mount} already mounted."
@@ -111,7 +115,11 @@ mount_acd () {
 		# Mount ACD decrypted directory if necessary.
 		if ! mountpoint -q "$acd_mount_decrypt" ; then
 			echo "[ $(date ${date_format}) ] Mounting decrypted Amazon Cloud Drive mountpoint: ${acd_mount_decrypt}"
-			encfs --extpass="$pass_cmd" "${acd_mount}" "${acd_mount_decrypt}"
+			if [ ! "$acd_subdir" = "" ]; then
+				encfs --extpass="$pass_cmd" "${acd_mount}/${acd_subdir}" "${acd_mount_decrypt}"
+			else
+				encfs --extpass="$pass_cmd" "${acd_mount}" "${acd_mount_decrypt}"
+			fi
 		else
 			echo "[ $(date ${date_format}) ] Decrypted Amazon Cloud Drive mountpoint: ${acd_mount_decrypt} already mounted."
 		fi

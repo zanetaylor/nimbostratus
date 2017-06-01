@@ -19,8 +19,7 @@ cached_media_dir="${HOME}/mediacache"
 # GOOGLE DRIVE CONFIG
 ###############################################################################
 use_gdrive=1
-gd_remote="gsuite"
-gd_label="default"
+gd_label="gsuite"
 gd_subdir=""
 use_ocamlfuse=0
 use_plexdrive=1
@@ -31,7 +30,7 @@ use_gd_crypt=1
 # AMAZON DRIVE CONFIG
 ###############################################################################
 use_acd=0
-acd_remote=""
+acd_label=""
 acd_subdir=""
 use_acdcli=0
 use_acd_rclone=0
