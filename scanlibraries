@@ -30,14 +30,14 @@ else
 fi
 
 echo "############ Movie scan started ############"
-find "${movie_directory}" -L -mindepth 1 -type d "${find_options}" |
+find -L "${movie_directory}" -mindepth 1 -type d ${find_options} |
 while read -r d; do
 	echo "Scanning directory: $d"
 	${PLEX_MEDIA_SERVER_HOME}/Plex\ Media\ Scanner -s -r -c "$movie_category" -d "$d"
 done
 
 echo "############## TV scan started ##############"
-find "${tv_directory}" -L -mindepth 2 -type d "${find_options}" |
+find -L "${tv_directory}" -mindepth 2 -type d ${find_options} |
 while read -r d; do
 	echo "Scanning directory: $d"
 	${PLEX_MEDIA_SERVER_HOME}/Plex\ Media\ Scanner -s -r -c "$tv_category" -d "$d"
