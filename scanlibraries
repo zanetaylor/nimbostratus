@@ -30,6 +30,7 @@ else
 fi
 
 echo "############ Movie scan started ############"
+# shellcheck disable=SC2086
 find -L "${movie_directory}" -mindepth 1 -type d ${find_options} |
 while read -r d; do
 	echo "Scanning directory: $d"
@@ -37,6 +38,7 @@ while read -r d; do
 done
 
 echo "############## TV scan started ##############"
+# shellcheck disable=SC2086
 find -L "${tv_directory}" -mindepth 2 -type d ${find_options} |
 while read -r d; do
 	echo "Scanning directory: $d"
