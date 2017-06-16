@@ -2,7 +2,7 @@
 ###############################################################################
 # CONFIGURATION
 ###############################################################################
-# shellcheck source=config
+# shellcheck source=/home/gesis/src/nimbostratus/config
 . "${HOME}/.config/nimbostratus/config"
 
 if [ "$use_crypt" = 1 ] || [ "$use_local_crypt" = 1 ]; then
@@ -41,9 +41,9 @@ find "${local_media}" -type f |
 		esac
 
 		# If file is opened by another process, wait until it isn't.
-		while [ "$(lsof "$n" >/dev/null 2>&1)" ] || \
-			[ "$(lsof "${local_media}/${name}" >/dev/null 2>&1)" ] || \
-			[ "$(lsof "${plex_media_dir}/${name}" >/dev/null 2>&1)" ]; do
+		while [ "$(lsof 2>&1 | grep -c "$n")" -gt 0 ] || \
+			[ "$(lsof 2>&1 | grep -c "${local_media}/${name}")" -gt 0 ] || \
+			[ "$(lsof 2>&1 | grep -c "${plex_media_dir}/${name}")" -gt 0 ]; do
 			echo "[ $(date ${date_format}) ] File -> ${name} in use. Retrying in 10 seconds."
 			sleep 10
 		done
@@ -51,14 +51,14 @@ find "${local_media}" -type f |
 		# Copy file to remote destination[s], retaining path
 		if [ "$use_gdrive" = 1 ]; then
 			echo "[ $(date ${date_format}) ] Transfering file -> ${name} to Google Drive."
-			find "$n" -exec "${rclone_bin}" copy -c '{}' "${gd_label}:${gd_subdir}${destpath}" \; >/dev/null 2>&1
+			find "$n" -exec "${rclone_bin}" copy -c '{}' "${gd_label}:${gd_subdir}${destpath}" \; >/dev/null 2>&1 || echo "[ $(date ${date_format}) ] ERROR! Transfering file -> ${name} to Google Drive FAILED."
 		fi
 		if [ "$use_acd" = 1 ]; then
 			echo "[ $(date ${date_format}) ] Transfering file -> ${name} to Amazon Cloud Drive."
-			find "$n" -exec "${rclone_bin}" copy -c '{}' "${acd_label}:${acd_subdir}${destpath}" \; >/dev/null 2>&1
+			find "$n" -exec "${rclone_bin}" copy -c '{}' "${acd_label}:${acd_subdir}${destpath}" \; >/dev/null 2>&1 || echo "[ $(date ${date_format}) ] ERROR! Transfering file -> ${name} to Amazon Cloud Drive FAILED." 
 		fi
 	done
 
 # success!
-exit 02
+exit 0
 

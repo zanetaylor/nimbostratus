@@ -2,7 +2,7 @@
 ##############################################################################
 # CONFIGURATION
 ##############################################################################
-# shellcheck source=config
+# shellcheck source=/home/gesis/src/nimbostratus/config
 . "${HOME}/.config/nimbostratus/config"
 
 if [ "$use_crypt" = 1 ]; then
@@ -46,10 +46,11 @@ find "${local_dir}" -type f |
 		local_checksum=$(md5sum "$n" | awk '{print $1}')
 
 		# If file is opened by another process, wait until it isn't.
-		while [ "$(lsof "$n" >/dev/null 2>&1)" ] || \
-			[ "$(lsof "${local_dir}/${name}" >/dev/null 2>&1)" ] || \
-			[ "$(lsof "${plex_media_dir}/${name}" >/dev/null 2>&1)" ]; do
-			echo "[ $(date ${date_format}) ] File -> ${name} in use. Retrying in 10 seconds."
+                while [ "$(lsof 2>&1 | grep -c "$n")" -gt 0 ] || \
+                        [ "$(lsof 2>&1 | grep -c "${local_media}/${name}")" -gt 0 ] || \
+                        [ "$(lsof 2>&1 | grep -c "${plex_media_dir}/${name}")" -gt 0 ]; do
+                        echo "[ $(date ${date_format}) ] File -> ${name} in use. Retrying in 10 s
+econds."
 			sleep 10
 		done
 
