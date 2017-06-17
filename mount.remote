@@ -49,7 +49,14 @@ mount_gdrive () {
 				fuse_options="read_only"
 			fi
 			screen -dmS plexdrive "$(which sh)" -c "${plexdrive_bin} -v 3 -o ${fuse_options} ${gd_mount}"
-		fi		
+			
+			# Wait until plexdrive is fully mounted before moving to encryption if subdirectory in use.
+			if [ "$gd_subdir" != "" ]; then
+				while [ -d "${gd_mount}/${gd_subdir}" ]; do
+					sleep 1
+				done
+			fi
+		fi	
 	else
 		echo "[ $(date ${date_format}) ] Google Drive mountpoint: ${gd_mount} already mounted."
 	fi
