@@ -1,0 +1,45 @@
+#!/bin/sh
+##############################################################################
+# CONFIGURATION
+##############################################################################
+# shellcheck source=/home/gesis/src/nimbostratus/config
+. "${HOME}/.config/nimbostratus/config"
+export ENCFS6_CONFIG="${encfs_cfg}"
+
+##############################################################################
+# FUNCTIONS
+##############################################################################
+usage () {
+	echo "${0} [-r] ${plex_media_dir}/paths/to/files/to/remove"
+}
+##############################################################################
+
+rclone_opt="delete"
+
+if [ "$1" = "" ]; then
+	usage
+	exit 3
+fi
+
+while getopts ":rh" opts; do
+	case $opts in
+		r) rclone_opt="purge" ;;
+		h) usage; exit 3 ;;
+		\?) echo "Unrecognized option: -${OPTARG}" >&2 ;;
+	esac
+done
+
+shift $((OPTIND-1))
+
+
+for i in "$@"; do
+	if [ -f "$i" ]; then 
+		plex_media=$(readlink -f "$plex_media_dir")
+		decryptname="$(readlink -f "$i" | sed -e "s@${plex_media}/@@")"
+		encryptname="$(encfsctl encode --extpass="${pass_cmd}" "$local_media" "$decryptname")"
+		rclone "$rclone_opt" "${gd_label}:${gd_subdir}/${encryptname}"
+	else
+		echo "$i does not exist."
+	fi
+done
+
