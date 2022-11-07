@@ -1,0 +1,42 @@
+#!/bin/sh
+# shellcheck source=config
+. ${HOME}/.config/nimbostratus/config
+
+echo "################# DELETE HIDDEN FILES FROM CLOUD ################"
+find -L "${plex_media_dir}"/.union*/ -type f -iname '*_HIDDEN~' |
+while read -r file; do
+
+        rm_file="$(readlink -f "${file}" | sed -e "s@/\.union[^/]*@@g" -e "s@_HIDDEN~@@")"
+
+        echo "Deleting unionfs hidden file -> ${file}."
+        rm -rf "${file}"
+
+        if [ -f "$rm_file" ]; then
+                echo "[ $(date ${date_format}) ] Deleting cloud file -> ${rm_file}."
+                rmremote "$rm_file"
+
+                else
+
+                echo "[ $(date ${date_format}) ] $rm_file does not exist."
+        fi
+done
+
+echo "################# DELETE HIDDEN DIRECTORIES FROM CLOUD ################"
+find -L "${plex_media_dir}"/.union*/ -type d -iname '*_HIDDEN~' |
+while read -r dir; do
+
+        rm_dir="$(readlink -f "${dir}" | sed -e "s@/\.union[^/]*@@g" -e "s@_HIDDEN~@@")"
+
+        echo "Deleting unionfs hidden directory -> ${dir}."
+        rm -rf "${dir}"
+
+        if [ -d "$rm_dir" ]; then
+                echo "[ $(date ${date_format}) ] Deleting cloud directory -> ${rm_dir}."
+                rmremote -r "$rm_dir"
+
+                else
+
+                echo "[ $(date ${date_format}) ] $rm_dir does not exist."
+        fi
+
+done
